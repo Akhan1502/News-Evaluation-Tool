@@ -7,12 +7,7 @@ import { useAuth } from './contexts/auth-context'
 import { HomePage } from './routes/home/page'
 import { AnalyzerPage } from './routes/analyzer/page'
 import './App.css'
-
-// Protected Route component
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth()
-  return isAuthenticated ? children : <Navigate to="/auth" />
-}
+import { ProtectedRoute } from './components/protected-route'
 
 // Auth Route component (redirects to home if already authenticated)
 function AuthRoute({ children }: { children: React.ReactNode }) {
@@ -24,11 +19,11 @@ function AppRoutes() {
   return (
     <Routes>
       <Route 
-        path="/auth" 
+        path="/" 
         element={
-          <AuthRoute>
-            <AuthPage />
-          </AuthRoute>
+          <ProtectedRoute>
+            <AnalyzerPage />
+          </ProtectedRoute>
         } 
       />
       <Route 
@@ -39,22 +34,7 @@ function AppRoutes() {
           </ProtectedRoute>
         } 
       />
-      <Route 
-        path="/analyzer" 
-        element={
-          <ProtectedRoute>
-            <AnalyzerPage />
-          </ProtectedRoute>
-        } 
-      />
-      <Route 
-        path="/" 
-        element={
-          <ProtectedRoute>
-            <HomePage />
-          </ProtectedRoute>
-        } 
-      />
+      <Route path="/auth" element={<AuthPage />} />
     </Routes>
   )
 }

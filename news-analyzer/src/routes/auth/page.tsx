@@ -1,47 +1,46 @@
-import { useNavigate } from 'react-router-dom'
-import { GoogleLogin } from '@react-oauth/google'
 import { useAuth } from '@/contexts/auth-context'
+import { useNavigate } from 'react-router-dom'
+import { useGoogleLogin } from '@react-oauth/google'
 import { Card } from '@/components/ui/card'
 
 export function AuthPage() {
+  const { signIn } = useAuth()
   const navigate = useNavigate()
-  const { login } = useAuth()
 
-  const handleSuccess = async (credentialResponse: any) => {
-    try {
-      if (credentialResponse.credential) {
-        login(credentialResponse.credential)
-        navigate('/analyzer')
+  const login = useGoogleLogin({
+    onSuccess: async (response) => {
+      try {
+        await signIn(response.access_token)
+        navigate('/')
+      } catch (error) {
+        console.error('Login failed:', error)
       }
-    } catch (error) {
-      console.error('Authentication error:', error)
-    }
-  }
+    },
+    onError: (error) => console.error('Login Failed:', error)
+  })
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#0a0a0a] px-4">
-      <Card className="w-full max-w-md space-y-6 p-6">
-        <div className="space-y-2 text-center">
-          <h1 className="text-2xl font-bold tracking-tighter text-gray-200">
-            News Analyzer
-          </h1>
-          <p className="text-gray-400">
-            Sign in to continue
-          </p>
+    <div className="min-h-screen bg-[#0a0a0a] flex items-center justify-center">
+      <div className="max-w-md w-full mx-auto p-6">
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-bold text-white mb-2">Welcome Back</h1>
+          <p className="text-white/50">Sign in to continue to News Analyzer</p>
         </div>
-        
-        <div className="flex flex-col items-center">
-          <GoogleLogin
-            onSuccess={handleSuccess}
-            onError={() => console.error('Login Failed')}
-            theme="filled_black"
-            size="large"
-            text="continue_with"
-            useOneTap
-            auto_select
+
+        <button
+          onClick={() => login()}
+          className="w-full flex items-center justify-center gap-2 bg-white text-gray-900 
+                     hover:bg-gray-100 px-6 py-3 rounded-md transition-colors duration-200
+                     font-medium shadow-sm hover:shadow"
+        >
+          <img 
+            src="/google.svg" 
+            alt="Google" 
+            className="w-5 h-5"
           />
-        </div>
-      </Card>
+          Sign in with Google
+        </button>
+      </div>
     </div>
   )
 } 

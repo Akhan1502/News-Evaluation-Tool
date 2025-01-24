@@ -2,8 +2,9 @@ import { Button } from './components/Button'
 import { Card } from './components/ui/card'
 import { Separator } from './components/ui/separator'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './components/ui/accordion'
-import { InfoIcon, AlertCircle, FileText } from 'lucide-react'
+import { InfoIcon, AlertCircle } from 'lucide-react'
 import { useState } from 'react'
+import { api } from './lib/api'
 
 interface ScrapedData {
   title: string;
@@ -21,9 +22,9 @@ const getBrowserAPI = () => {
   throw new Error('No browser API found');
 };
 
-function App() {
-  const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
+export default function App() {
   const [isLoading, setIsLoading] = useState(false);
+  const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
   const [trustScore, setTrustScore] = useState<number | null>(null);
 
   const analyzeContent = async () => {
@@ -52,151 +53,92 @@ function App() {
 
       const data = result[0].result;
       setScrapedData(data);
-      
-      // Simulate trust score calculation
-      const mockScore = Math.floor(Math.random() * 30) + 70; // Random score between 70-100
-      setTrustScore(mockScore);
-      
-      console.log('Analyzed Data:', data);
+
+      // Send to backend for analysis
+      try {
+        const analysis = await api.analyzeContent({
+          title: data.title,
+          content: data.content,
+          url: tab.url || ''
+        });
+        
+        setTrustScore(analysis.rating);
+        console.log('Analysis result:', analysis);
+      } catch (error) {
+        console.error('Backend analysis error:', error);
+        setTrustScore(null);
+      }
     } catch (error) {
       console.error('Analysis error:', error);
+      setTrustScore(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex flex-col p-4 bg-zinc-900 min-h-[500px]">
-      {/* Trust Score Card */}
-      <Card className="p-4 bg-zinc-800 border-zinc-700 shadow-lg">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold tracking-tight">Trust Score</h2>
-          {trustScore && (
-            <div className="flex flex-col items-end">
-              <span className={`text-2xl font-bold ${
-                trustScore > 80 ? 'text-green-400' : 
-                trustScore > 60 ? 'text-yellow-400' : 'text-red-400'
-              }`}>
-                {trustScore}%
-              </span>
-              <span className="text-xs text-zinc-400">Confidence Level</span>
-            </div>
-          )}
-        </div>
-        <div className="flex items-center gap-2 text-sm text-zinc-400 bg-zinc-900/30 p-2 rounded">
-          <InfoIcon size={16} className="text-blue-400" />
-          <span>AI-powered content analysis and verification</span>
+    <div className="p-4 space-y-4">
+      <Card className="p-4">
+        <div className="flex items-start gap-2">
+          <InfoIcon size={20} className="text-blue-500 mt-1" />
+          <div className="space-y-1">
+            <h2 className="text-sm font-medium">Content Analysis</h2>
+            <p className="text-xs text-zinc-400">
+              Analyze the current page for content reliability and bias.
+            </p>
+            {trustScore !== null && (
+              <div className="text-sm mt-2">
+                Trust Score: {trustScore}%
+              </div>
+            )}
+          </div>
         </div>
       </Card>
 
       <Separator className="my-4 bg-zinc-700" />
 
-      {/* Content Preview Card */}
-      {scrapedData && (
-        <>
-          <Card className="p-4 bg-zinc-800 border-zinc-700 shadow-lg">
-            <div className="space-y-3">
-              <h3 className="font-medium text-zinc-200 flex items-center gap-2">
-                <FileText size={16} className="text-blue-400" />
-                Article Content
-              </h3>
-              <div className="space-y-2">
-                <div className="text-sm font-medium text-zinc-300 bg-zinc-900/30 p-2 rounded">
-                  {scrapedData.title}
-                </div>
-                <div className="max-h-[120px] overflow-y-auto text-sm text-zinc-400 bg-zinc-900/30 p-2 rounded">
-                  {scrapedData.content.slice(0, 300)}...
-                </div>
-              </div>
-            </div>
-          </Card>
-          <Separator className="my-4 bg-zinc-700" />
-        </>
-      )}
-
-      {/* Analysis Section */}
-      <div className="space-y-3 flex-grow">
+      <div className="space-y-4">
         <Button 
-          className="w-full h-10 text-sm font-medium shadow-lg"
+          className="w-full"
           onClick={analyzeContent}
           disabled={isLoading}
         >
-          {isLoading ? (
-            <span className="flex items-center gap-2">
-              <span className="animate-spin">⚡</span> 
-              Analyzing...
-            </span>
-          ) : (
-            'Analyze Current Page'
-          )}
+          {isLoading ? 'Analyzing...' : 'Analyze Current Page'}
         </Button>
 
-        {/* Advanced Controls */}
-        <Accordion type="single" collapsible className="shadow-lg">
+        {scrapedData && (
+          <Card className="p-4">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">{scrapedData.title}</h3>
+              <p className="text-xs text-zinc-400 line-clamp-3">
+                {scrapedData.content}
+              </p>
+            </div>
+          </Card>
+        )}
+
+        <Accordion type="single" collapsible>
           <AccordionItem value="advanced">
-            <AccordionTrigger className="text-sm hover:bg-zinc-800/50 px-4">
+            <AccordionTrigger className="text-sm">
               Advanced Controls
             </AccordionTrigger>
             <AccordionContent>
-              <div className="space-y-4 p-4 bg-zinc-800/30 rounded-b">
+              <div className="space-y-4 p-2">
                 <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-yellow-400 mt-1 shrink-0" />
+                  <AlertCircle size={16} className="text-yellow-500 mt-1" />
                   <p className="text-sm text-zinc-400">
-                    Access complete article content and detailed analysis metrics
+                    Advanced analysis includes source verification, fact-checking against trusted databases, 
+                    and sentiment analysis.
                   </p>
                 </div>
-                <div className="grid gap-2">
-                  <Button 
-                    variant="outline" 
-                    className="w-full h-9 text-sm font-medium"
-                    onClick={() => {
-                      if (scrapedData) {
-                        navigator.clipboard.writeText(
-                          `Title: ${scrapedData.title}\n\nContent:\n${scrapedData.content}`
-                        );
-                      }
-                    }}
-                    disabled={!scrapedData}
-                  >
-                    Copy Full Content
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    className="w-full h-9 text-sm font-medium"
-                    onClick={() => {
-                      if (scrapedData) {
-                        console.log('Full Analysis:', {
-                          title: scrapedData.title,
-                          content: scrapedData.content,
-                          trustScore,
-                          metrics: {
-                            wordCount: scrapedData.content.split(' ').length,
-                            paragraphCount: scrapedData.content.split('\n\n').length,
-                            averageWordsPerParagraph: Math.round(
-                              scrapedData.content.split(' ').length / 
-                              scrapedData.content.split('\n\n').length
-                            )
-                          }
-                        });
-                      }
-                    }}
-                    disabled={!scrapedData}
-                  >
-                    View Detailed Analysis
-                  </Button>
-                </div>
+                <Button variant="outline" className="w-full">
+                  Run Deep Analysis
+                </Button>
               </div>
             </AccordionContent>
           </AccordionItem>
         </Accordion>
-
-        {/* Footer Info */}
-        <div className="text-center text-xs text-zinc-500 mt-4">
-          Powered by AI Content Analysis
-        </div>
       </div>
     </div>
-  )
+  );
 }
-
-export default App
