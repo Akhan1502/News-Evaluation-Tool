@@ -16,10 +16,10 @@ export interface AnalysisResponse {
 }
 
 export interface SentimentHistoryResponse {
-  history: {
+  history: Array<{
     timestamp: string
     value: number
-  }[]
+  }>
 }
 
 class APIService {
@@ -41,20 +41,20 @@ class APIService {
           'Content-Type': 'application/json',
           ...options?.headers,
         },
-      });
+      })
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('API Error:', errorText);
-        throw new Error(`API Error: ${response.statusText} - ${errorText}`);
+        const errorText = await response.text()
+        console.error('API Error:', errorText)
+        throw new Error(`API Error: ${response.statusText} - ${errorText}`)
       }
 
-      const data = await response.json();
-      console.log('API Response:', data);
-      return data;
+      const data = await response.json()
+      console.log('API Response:', data)
+      return data
     } catch (error) {
-      console.error('API Request failed:', error);
-      throw error;
+      console.error('API Request failed:', error)
+      throw error
     }
   }
 
@@ -63,9 +63,13 @@ class APIService {
       method: 'POST',
       body: JSON.stringify({
         ...data,
-        url: data.url || window.location.href // Use current URL if not provided
+        url: data.url || window.location.href
       }),
-    });
+    })
+  }
+
+  async getSentimentHistory(url: string): Promise<SentimentHistoryResponse> {
+    return this.fetch<SentimentHistoryResponse>(`${CONFIG.ENDPOINTS.SENTIMENT_HISTORY}?url=${encodeURIComponent(url)}`)
   }
 }
 

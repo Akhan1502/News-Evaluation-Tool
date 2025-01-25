@@ -1,9 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import logging
 from datetime import datetime
+import random  # For mock data generation
 
 # Configure logging
 logging.basicConfig(
@@ -28,8 +29,24 @@ class ArticleData(BaseModel):
     content: str
     url: Optional[str] = None  # Make URL optional
 
+class SentimentHistoryResponse(BaseModel):
+    history: List[Dict[str, Any]]
+
+# In-memory storage for sentiment history
+sentiment_history_db: Dict[str, List[Dict[str, Any]]] = {}
+
 @app.post("/analyze")
 async def analyze_content(article: ArticleData):
+    # Store sentiment history for the URL
+    if article.url:
+        if article.url not in sentiment_history_db:
+            sentiment_history_db[article.url] = []
+        
+        # Add new sentiment entry
+        sentiment_history_db[article.url].append({
+            "timestamp": datetime.now().isoformat(),
+            "value": random.uniform(0.3, 0.9)  # Mock sentiment value between 0.3 and 0.9
+        })
     try:
         logger.info(f"Received analysis request")
         logger.info(f"Title: {article.title}")
@@ -66,6 +83,17 @@ async def analyze_content(article: ArticleData):
     except Exception as e:
         logger.error(f"Error processing analysis request: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/sentiment/history")
+async def get_sentiment_history(url: str) -> SentimentHistoryResponse:
+    """Get sentiment history for a specific URL"""
+    logger.info(f"Fetching sentiment history for URL: {url}")
+    
+    if url not in sentiment_history_db:
+        # If no history exists, return empty history
+        return SentimentHistoryResponse(history=[])
+    
+    return SentimentHistoryResponse(history=sentiment_history_db[url])
 
 if __name__ == "__main__":
     import uvicorn

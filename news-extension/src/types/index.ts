@@ -20,4 +20,5 @@ export interface AnalysisState {
   sentiment: SentimentData | null
   criteria: CriteriaItem[]
   analysisId: string | null
-} 
+  summary?: string
+}

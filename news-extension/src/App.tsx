@@ -96,11 +96,29 @@ export default function App() {
     
       setAnalysis(analysisResult);
       
+      // Fetch sentiment trend data
+      try {
+        const trendData = await api.getSentimentHistory(scrapedData.url);
+        setSentimentTrend(trendData.history.map(item => ({
+          time: item.timestamp,
+          value: item.value
+        })));
+      } catch (error) {
+        console.error('Failed to fetch sentiment trend:', error);
+        setSentimentTrend([]);
+      }
+      
     } catch (error) {
       console.error('Analysis error:', error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const openAnalysisDashboard = (analysisId: string | null) => {
+    if (!analysisId) return;
+    const dashboardUrl = `${import.meta.env.VITE_DASHBOARD_URL}/analysis/${analysisId}`;
+    window.open(dashboardUrl, '_blank');
   };
 
   return (
@@ -113,11 +131,12 @@ export default function App() {
             onClick={analyzeContent}
             disabled={isLoading}
             size="sm"
+            className="bg-blue-600 hover:bg-blue-700"
           >
             {isLoading ? 'Analyzing...' : 'Analyze'}
           </Button>
         </div>
-
+    
         {/* Main Metrics */}
         <div className="grid grid-cols-3 gap-3">
           <Card className="p-3 bg-zinc-800/50 border-zinc-700 flex items-center justify-center">
@@ -145,7 +164,7 @@ export default function App() {
             />
           </Card>
         </div>
-
+    
         {/* Journalistic Criteria */}
         <Card className="p-3 bg-zinc-800/50 border-zinc-700">
           <div className="mb-2">
@@ -156,7 +175,7 @@ export default function App() {
           </div>
           <CriteriaCheck criteria={analysis.criteria} />
         </Card>
-
+    
         {/* Sentiment Trend */}
         {sentimentTrend.length > 0 && (
           <Card className="p-3 bg-zinc-800/50 border-zinc-700">
@@ -169,16 +188,19 @@ export default function App() {
             <SentimentChart data={sentimentTrend} />
           </Card>
         )}
-
+    
         {/* View Full Analysis Button */}
         <Button 
-          className="w-full sticky bottom-0"
-          onClick={() => window.open('http://localhost:5173/analysis', '_blank')}
+          className="w-full bg-green-600 hover:bg-green-700 transition-colors sticky bottom-0"
+          onClick={() => openAnalysisDashboard(analysis.analysisId)}
           disabled={!analysis.analysisId}
         >
           View Full Analysis
           <ExternalLink className="w-4 h-4 ml-2" />
         </Button>
+        <div className="text-blue-500">
+          <p className="mb-2">{analysis.summary}</p>
+        </div>
       </div>
     </div>
   )
