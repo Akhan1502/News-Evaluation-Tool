@@ -1,144 +1,185 @@
-import { Button } from './components/Button'
-import { Card } from './components/ui/card'
-import { Separator } from './components/ui/separator'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './components/ui/accordion'
-import { InfoIcon, AlertCircle } from 'lucide-react'
 import { useState } from 'react'
+import { Button } from './components/ui/button'
+import { Card } from './components/ui/card'
+import { Gauge } from './components/ui/gauge'
+import { SentimentChart } from './components/ui/sentiment-chart'
+import { CriteriaCheck } from './components/ui/criteria-check'
+import { BarChart2, ExternalLink, CheckCircle } from 'lucide-react'
 import { api } from './lib/api'
+import getBrowserAPI from './lib/browser'
+import type { AnalysisState } from './types'
 
-interface ScrapedData {
-  title: string;
-  content: string;
+const initialAnalysisState: AnalysisState = {
+  trustScore: null,
+  confidence: null,
+  sentiment: null,
+  criteria: [],
+  analysisId: null,
 }
 
-// Helper to get the browser API
-const getBrowserAPI = () => {
-  if (typeof chrome !== 'undefined') {
-    return chrome;
-  }
-  if (typeof browser !== 'undefined') {
-    return browser;
-  }
-  throw new Error('No browser API found');
-};
+interface SentimentDataPoint {
+  time: string
+  value: number
+}
 
 export default function App() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [scrapedData, setScrapedData] = useState<ScrapedData | null>(null);
-  const [trustScore, setTrustScore] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false)
+  const [analysis, setAnalysis] = useState<AnalysisState>(initialAnalysisState)
+  const [sentimentTrend, setSentimentTrend] = useState<SentimentDataPoint[]>([])
 
   const analyzeContent = async () => {
-    setIsLoading(true);
+    setIsLoading(true)
+    console.log('Starting content analysis...')
+    
     try {
-      const browserAPI = getBrowserAPI();
-      const [tab] = await browserAPI.tabs.query({ active: true, currentWindow: true });
-      
-      if (!tab.id) return;
-
-      const result = await browserAPI.scripting.executeScript({
-        target: { tabId: tab.id },
-        func: () => {
-          const title = document.querySelector('h1')?.textContent || 
-                       document.title || 
-                       'Unknown Title';
-
-          const paragraphs = Array.from(document.querySelectorAll('p'))
-            .map(p => p.textContent?.trim())
-            .filter(Boolean)
-            .join('\n\n');
-
-          return { title, content: paragraphs };
-        }
-      });
-
-      const data = result[0].result;
-      setScrapedData(data);
-
-      // Send to backend for analysis
+      let browserAPI
       try {
-        const analysis = await api.analyzeContent({
-          title: data.title,
-          content: data.content,
-          url: tab.url || ''
-        });
-        
-        setTrustScore(analysis.rating);
-        console.log('Analysis result:', analysis);
-      } catch (error) {
-        console.error('Backend analysis error:', error);
-        setTrustScore(null);
+        browserAPI = getBrowserAPI()
+        console.log('Browser API initialized successfully')
+      } catch (e) {
+        console.error('Browser API initialization failed:', e)
+        throw new Error('Unable to access browser extension API')
       }
+    
+      console.log('Querying active tab...')
+      const [tab] = await browserAPI.tabs.query({ active: true, currentWindow: true })
+      
+      if (!tab?.id) {
+        throw new Error('No active tab found')
+      }
+      console.log('Active tab found:', tab.url)
+    
+      // Execute content scraping script
+      const result = await browserAPI.tabs.executeScript(tab.id, {
+        code: `
+          (() => {
+            try {
+              const title = document.querySelector('h1')?.textContent || 
+                           document.title || 
+                           'Unknown Title';
+      
+              const paragraphs = Array.from(document.querySelectorAll('p'))
+                .map(p => p.textContent?.trim())
+                .filter(Boolean)
+                .join('\n\n');
+      
+              return { 
+                title, 
+                content: paragraphs || 'No content found',
+                url: window.location.href 
+              };
+            } catch (error) {
+              console.error('Content scraping failed:', error);
+              return {
+                title: 'Error',
+                content: 'Failed to scrape content',
+                url: window.location.href
+              };
+            }
+          })()
+        `
+      });
+    
+      const scrapedData = result[0]?.result || result[0];
+      console.log('Content scraped:', {
+        title: scrapedData.title,
+        url: scrapedData.url,
+        contentLength: scrapedData.content.length
+      });
+    
+      // Send to backend for analysis
+      const analysisResult = await api.analyzeContent({
+        title: scrapedData.title,
+        content: scrapedData.content,
+        url: scrapedData.url
+      });
+    
+      setAnalysis(analysisResult);
+      
     } catch (error) {
       console.error('Analysis error:', error);
-      setTrustScore(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="p-4 space-y-4">
-      <Card className="p-4">
-        <div className="flex items-start gap-2">
-          <InfoIcon size={20} className="text-blue-500 mt-1" />
-          <div className="space-y-1">
-            <h2 className="text-sm font-medium">Content Analysis</h2>
-            <p className="text-xs text-zinc-400">
-              Analyze the current page for content reliability and bias.
-            </p>
-            {trustScore !== null && (
-              <div className="text-sm mt-2">
-                Trust Score: {trustScore}%
-              </div>
-            )}
-          </div>
+    <div className="min-h-[fit-content] max-h-[600px] overflow-y-auto bg-zinc-900 text-white">
+      <div className="p-3 space-y-3">
+        {/* Header */}
+        <div className="flex items-center justify-between sticky top-0 bg-zinc-900 py-2 z-10">
+          <h1 className="text-lg font-bold">Content Analysis</h1>
+          <Button
+            onClick={analyzeContent}
+            disabled={isLoading}
+            size="sm"
+          >
+            {isLoading ? 'Analyzing...' : 'Analyze'}
+          </Button>
         </div>
-      </Card>
 
-      <Separator className="my-4 bg-zinc-700" />
+        {/* Main Metrics */}
+        <div className="grid grid-cols-3 gap-3">
+          <Card className="p-3 bg-zinc-800/50 border-zinc-700 flex items-center justify-center">
+            <Gauge
+              value={analysis.trustScore ?? 0}
+              label="Trust Score"
+              size="sm"
+              type="trust"
+            />
+          </Card>
+          <Card className="p-3 bg-zinc-800/50 border-zinc-700 flex items-center justify-center">
+            <Gauge
+              value={analysis.confidence ?? 0}
+              label="Confidence"
+              size="sm"
+              type="confidence"
+            />
+          </Card>
+          <Card className="p-3 bg-zinc-800/50 border-zinc-700 flex items-center justify-center">
+            <Gauge
+              value={(analysis.sentiment?.score ?? 0) * 100}
+              label="Sentiment"
+              size="sm"
+              type="sentiment"
+            />
+          </Card>
+        </div>
 
-      <div className="space-y-4">
-        <Button 
-          className="w-full"
-          onClick={analyzeContent}
-          disabled={isLoading}
-        >
-          {isLoading ? 'Analyzing...' : 'Analyze Current Page'}
-        </Button>
+        {/* Journalistic Criteria */}
+        <Card className="p-3 bg-zinc-800/50 border-zinc-700">
+          <div className="mb-2">
+            <h2 className="text-xs font-medium flex items-center gap-1.5">
+              <CheckCircle className="w-3.5 h-3.5" />
+              Journalistic Criteria
+            </h2>
+          </div>
+          <CriteriaCheck criteria={analysis.criteria} />
+        </Card>
 
-        {scrapedData && (
-          <Card className="p-4">
-            <div className="space-y-2">
-              <h3 className="text-sm font-medium">{scrapedData.title}</h3>
-              <p className="text-xs text-zinc-400 line-clamp-3">
-                {scrapedData.content}
-              </p>
+        {/* Sentiment Trend */}
+        {sentimentTrend.length > 0 && (
+          <Card className="p-3 bg-zinc-800/50 border-zinc-700">
+            <div className="mb-2">
+              <h2 className="text-xs font-medium flex items-center gap-1.5">
+                <BarChart2 className="w-3.5 h-3.5" />
+                Historical Sentiment Trend
+              </h2>
             </div>
+            <SentimentChart data={sentimentTrend} />
           </Card>
         )}
 
-        <Accordion type="single" collapsible>
-          <AccordionItem value="advanced">
-            <AccordionTrigger className="text-sm">
-              Advanced Controls
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-4 p-2">
-                <div className="flex items-start gap-2">
-                  <AlertCircle size={16} className="text-yellow-500 mt-1" />
-                  <p className="text-sm text-zinc-400">
-                    Advanced analysis includes source verification, fact-checking against trusted databases, 
-                    and sentiment analysis.
-                  </p>
-                </div>
-                <Button variant="outline" className="w-full">
-                  Run Deep Analysis
-                </Button>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+        {/* View Full Analysis Button */}
+        <Button 
+          className="w-full sticky bottom-0"
+          onClick={() => window.open('http://localhost:5173/analysis', '_blank')}
+          disabled={!analysis.analysisId}
+        >
+          View Full Analysis
+          <ExternalLink className="w-4 h-4 ml-2" />
+        </Button>
       </div>
     </div>
-  );
+  )
 }

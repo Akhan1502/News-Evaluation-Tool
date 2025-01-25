@@ -8,6 +8,9 @@ import { HomePage } from './routes/home/page'
 import { AnalyzerPage } from './routes/analyzer/page'
 import './App.css'
 import { ProtectedRoute } from './components/protected-route'
+import { useEffect } from 'react'
+import { api } from './lib/api'
+import { browser } from './lib/browser'
 
 // Auth Route component (redirects to home if already authenticated)
 function AuthRoute({ children }: { children: React.ReactNode }) {
@@ -41,6 +44,35 @@ function AppRoutes() {
 
 function App() {
   const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+
+  useEffect(() => {
+    const analyzeContent = async () => {
+      try {
+        console.log('Starting content analysis...')
+        
+        await browser.init()
+        
+        const scrapedContent = await browser.scrapeContent()
+        console.log('Scraped content:', scrapedContent)
+
+        if (!scrapedContent.url) {
+          throw new Error('URL is required but not found in scraped content')
+        }
+
+        const result = await api.analyzeContent({
+          title: scrapedContent.title,
+          content: scrapedContent.content,
+          url: scrapedContent.url
+        })
+
+        console.log('Analysis completed:', result)
+      } catch (error) {
+        console.error('Analysis failed:', error)
+      }
+    }
+
+    analyzeContent()
+  }, [])
 
   if (!GOOGLE_CLIENT_ID) {
     console.error('Google Client ID is not defined in environment variables')

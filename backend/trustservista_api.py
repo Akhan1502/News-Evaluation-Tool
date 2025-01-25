@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 import logging
 import asyncio
 import aiohttp
+import uuid
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -77,36 +78,46 @@ Response: {response_text}
             logger.error(f"Request to {endpoint} failed: {str(e)}")
             return None
 
-    async def analyze_article(self, content: str, is_url: bool = False, language: str = "eng") -> Dict[str, Any]:
-        """Analyze sentiment and clickbait concurrently for a single article"""
-        data = {
-            "content": content if not is_url else "EMPTY",
-            "contentUri": content if is_url else "",
-            "language": language
-        }
-
+    async def analyze_article(self, content: str, url: str = "", title: str = "") -> Dict[str, Any]:
+        """Analyze article content and return comprehensive results"""
         async with aiohttp.ClientSession() as session:
-            # Create tasks for both analyses
-            sentiment_task = asyncio.create_task(
-                self._make_async_request(session, 'sentiment', data)
-            )
-            clickbait_task = asyncio.create_task(
-                self._make_async_request(session, 'clickbait', data)
-            )
+            # Run multiple analyses in parallel
+            sentiment_task = self._make_async_request(session, 'sentiment', {
+                "content": content,
+                "language": "eng"
+            })
+            
+            trust_task = self._make_async_request(session, 'trustlevel', {
+                "content": content,
+                "contentUri": url,
+                "language": "eng"
+            })
+            
+            clickbait_task = self._make_async_request(session, 'clickbait', {
+                "content": title,
+                "language": "eng"
+            })
 
-            # Wait for both tasks to complete
-            sentiment_result, clickbait_result = await asyncio.gather(
-                sentiment_task, 
+            results = await asyncio.gather(
+                sentiment_task,
+                trust_task,
                 clickbait_task
             )
 
-            results = {}
-            if sentiment_result:
-                results['sentiment'] = sentiment_result
-            if clickbait_result:
-                results['clickbait'] = clickbait_result
+            sentiment_result, trust_result, clickbait_result = results
 
-            return results
+            # Combine and normalize results
+            return {
+                "rating": trust_result.get("trustLevel", 0) * 100 if trust_result else 50,
+                "confidence": trust_result.get("confidence", 0) * 100 if trust_result else 50,
+                "sentiment": {
+                    "score": sentiment_result.get("score", 0) if sentiment_result else 0,
+                    "label": sentiment_result.get("label", "neutral") if sentiment_result else "neutral"
+                },
+                "summary": "",  # Add summary generation if needed
+                "title": title,
+                "id": str(uuid.uuid4())
+            }
 
     def get_info(self) -> Optional[Dict[str, Any]]:
         """Get API information and quota"""

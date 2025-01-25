@@ -3,9 +3,33 @@
 @tailwind utilities;
 
 body {
-  width: 500px;
-  height: 800px;
+  width: 400px;
+  min-height: fit-content;
+  max-height: 600px;
   margin: 0;
   background-color: rgb(24 24 27);
   color: white;
+}
+
+/* Add some custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(63 63 70);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgb(82 82 91);
+}
+
+/* Ensure root takes full height */
+#root {
+  height: 100%;
 }

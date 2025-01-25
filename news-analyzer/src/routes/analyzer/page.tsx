@@ -57,6 +57,45 @@ export function AnalyzerPage() {
     navigate('/profile');
   };
 
+  const analyzeArticle = async (articleData: ArticleData) => {
+    try {
+      setIsLoading(true);
+      const result = await api.analyzeContent(articleData);
+      console.log('Analysis result:', result);
+      // Handle the analysis result as needed
+      setIsLoading(false);
+    } catch (error) {
+      console.error('Analysis failed:', error);
+      setIsLoading(false);
+    }
+  };
+
+  const fetchSentimentHistory = async (url: string) => {
+    try {
+      const history = await api.getSentimentHistory(url);
+      console.log('Sentiment history:', history);
+      // Handle the sentiment history as needed
+    } catch (error) {
+      console.error('Failed to fetch sentiment history:', error);
+    }
+  };
+
+  const testAnalysis = async () => {
+    try {
+      const testData = {
+        title: "Test Article",
+        content: "This is a test article content for analysis.",
+        url: "https://example.com/test-article" // Make sure URL is included
+      };
+
+      console.log('Sending test analysis request:', testData);
+      const result = await api.analyzeContent(testData);
+      console.log('Analysis result:', result);
+    } catch (error) {
+      console.error('Test analysis failed:', error);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
       {/* Header with app name and user profile */}
@@ -151,6 +190,12 @@ export function AnalyzerPage() {
               Select an analysis to view details
             </div>
           )}
+          <button
+            onClick={testAnalysis}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded"
+          >
+            Test Analysis
+          </button>
         </div>
       </div>
     </div>
