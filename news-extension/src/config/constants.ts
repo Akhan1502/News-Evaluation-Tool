@@ -2,12 +2,8 @@
 const isDevelopment = import.meta.env.DEV;
 
 export const CONFIG = {
-  API_BASE_URL: isDevelopment
-    ? 'http://localhost:8000'
-    : 'http://localhost:8000', // Keep localhost for now, change in production
-  ANALYSIS_DASHBOARD_URL: isDevelopment
-    ? 'http://localhost:5173/analysis'
-    : 'http://localhost:5173/analysis', // Keep localhost for now, change in production
+  API_BASE_URL: 'http://localhost:8000', // Using localhost for all modes temporarily
+  ANALYSIS_DASHBOARD_URL: 'http://localhost:8000', // Using localhost for all modes
   ENDPOINTS: {
     ANALYZE: '/analyze',
     SENTIMENT_HISTORY: '/sentiment/history',

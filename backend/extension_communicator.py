@@ -15,14 +15,18 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Allow all origins, methods and headers for development
+# Allow specific origins including Chrome extension
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",  # For development
+        "chrome-extension://*",    # For Chrome extension
+        "moz-extension://*"        # For Firefox extension
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Origin"],
+    expose_headers=["Content-Type"],
     max_age=3600
 )
 

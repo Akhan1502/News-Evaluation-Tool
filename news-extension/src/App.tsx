@@ -8,6 +8,7 @@ import { BarChart2, ExternalLink, CheckCircle } from 'lucide-react'
 import { api } from './lib/api'
 import { getBrowserAPI } from './lib/browser'
 import type { AnalysisState } from './types'
+import type { ScrapedData, ContentScriptResult } from './types/browser'
 
 const initialAnalysisState: AnalysisState = {
   trustScore: null,
@@ -21,6 +22,8 @@ interface SentimentDataPoint {
   time: string
   value: number
 }
+
+// Content script is now loaded from file
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(false)
@@ -50,37 +53,61 @@ export default function App() {
       console.log('Active tab found:', tab.url)
     
       // Execute content scraping script
-      const result = await browserAPI.tabs.executeScript(tab.id, {
-        code: `
-          (() => {
-            try {
-              const title = document.querySelector('h1')?.textContent || 
-                           document.title || 
-                           'Unknown Title';
+      console.log('Executing content script...');
+      console.log('Tab ID:', tab.id);
+      console.log('Content script path:', 'content-script.js');
       
-              const paragraphs = Array.from(document.querySelectorAll('p'))
-                .map(p => p.textContent?.trim())
-                .filter(Boolean)
-                .join('\n\n');
-      
-              return { 
-                title, 
-                content: paragraphs || 'No content found',
-                url: window.location.href 
-              };
-            } catch (error) {
-              console.error('Content scraping failed:', error);
-              return {
-                title: 'Error',
-                content: 'Failed to scrape content',
-                url: window.location.href
-              };
-            }
-          })()
-        `
-      });
-    
-      const scrapedData = result[0]?.result || result[0];
+      let result: ContentScriptResult[];
+      try {
+        result = await browserAPI.scripting.executeScript({
+          target: { tabId: tab.id },
+          func: () => {
+            const scrapeContent = () => {
+              console.log('Content script started executing');
+              try {
+                console.log('Attempting to extract title...');
+                const title = document.querySelector('h1')?.textContent || 
+                             document.title || 
+                             'Unknown Title';
+                console.log('Extracted title:', title);
+
+                console.log('Attempting to extract paragraphs...');
+                const paragraphs = Array.from(document.querySelectorAll('p'))
+                  .map(p => p.textContent?.trim())
+                  .filter(Boolean)
+                  .join('\n\n');
+                console.log('Extracted content length:', paragraphs.length);
+
+                return { 
+                  title, 
+                  content: paragraphs || 'No content found',
+                  url: window.location.href 
+                };
+              } catch (error) {
+                console.error('Content scraping failed:', error);
+                return {
+                  title: 'Error',
+                  content: 'Failed to scrape content',
+                  url: window.location.href
+                };
+              }
+            };
+            return scrapeContent();
+          }
+        });
+        console.log('Content script execution completed successfully');
+        console.log('Execution result:', result);
+      } catch (error) {
+        const scriptError = error as Error;
+        console.error('Content script execution failed:', scriptError);
+        console.error('Error details:', scriptError.message);
+        throw scriptError;
+      }
+
+      const scrapedData: ScrapedData = result[0].result;
+      if (!scrapedData) {
+        throw new Error('Content script execution failed');
+      }
       console.log('Content scraped:', {
         title: scrapedData.title,
         url: scrapedData.url,

@@ -1,8 +1,10 @@
-interface BrowserAPI {
-  tabs: {
-    query: (queryInfo: { active: boolean; currentWindow: boolean }) => Promise<Array<{ id?: number; url?: string }>>;
-    executeScript: (tabId: number, details: { code: string }) => Promise<Array<{ result: any }>>;
-  };
+import type { BrowserAPI } from '../types/browser';
+
+declare global {
+  interface Window {
+    chrome?: any;
+    browser?: any;
+  }
 }
 
 export async function getCurrentTab() {
@@ -21,13 +23,12 @@ export function getBrowserAPI(): BrowserAPI {
       tabs: {
         async query(queryInfo) {
           return await window.browser!.tabs.query(queryInfo);
-        },
-        async executeScript(tabId, details) {
-          const result = await window.browser!.scripting.executeScript({
-            target: { tabId },
-            func: new Function(details.code) as () => void
-          });
-          return [{ result: result[0]?.result }];
+        }
+      },
+      scripting: {
+        async executeScript(details) {
+          const result = await window.browser!.scripting.executeScript(details);
+          return result;
         }
       }
     };
@@ -39,13 +40,12 @@ export function getBrowserAPI(): BrowserAPI {
       tabs: {
         async query(queryInfo) {
           return await window.chrome!.tabs.query(queryInfo);
-        },
-        async executeScript(tabId, details) {
-          const result = await window.chrome!.scripting.executeScript({
-            target: { tabId },
-            func: new Function(details.code) as () => void
-          });
-          return [{ result: result[0]?.result }];
+        }
+      },
+      scripting: {
+        async executeScript(details) {
+          const result = await window.chrome!.scripting.executeScript(details);
+          return result;
         }
       }
     };
@@ -57,7 +57,9 @@ export function getBrowserAPI(): BrowserAPI {
     tabs: {
       async query() {
         return [{ id: 1, url: 'http://localhost:5173' }];
-      },
+      }
+    },
+    scripting: {
       async executeScript() {
         console.log('Mock: Script execution');
         return [{ result: { title: 'Mock Title', content: 'Mock Content', url: 'http://localhost:5173' } }];
