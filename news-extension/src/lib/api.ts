@@ -22,12 +22,38 @@ export interface SentimentHistoryResponse {
   }>
 }
 
+export interface APIError {
+  message: string
+  timestamp: string
+  endpoint: string
+  details?: any
+}
+
 class APIService {
   private baseUrl: string
+  private errors: APIError[] = []
+  private maxErrors = 50 // Keep last 50 errors
 
   constructor() {
     this.baseUrl = CONFIG.API_BASE_URL
     console.log('API Service initialized with base URL:', this.baseUrl)
+  }
+
+  private addError(error: APIError) {
+    this.errors.unshift(error)
+    if (this.errors.length > this.maxErrors) {
+      this.errors.pop()
+    }
+    // Dispatch error event for debug panel
+    window.dispatchEvent(new CustomEvent('api-error', { detail: error }))
+  }
+
+  getErrors(): APIError[] {
+    return [...this.errors]
+  }
+
+  clearErrors() {
+    this.errors = []
   }
 
   private async fetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -39,22 +65,43 @@ class APIService {
         ...options,
         headers: {
           'Content-Type': 'application/json',
+          'Origin': window.location.origin,
           ...options?.headers,
         },
+        credentials: 'include', // Include credentials for CORS
       })
 
       if (!response.ok) {
-        const errorText = await response.text()
-        console.error('API Error:', errorText)
-        throw new Error(`API Error: ${response.statusText} - ${errorText}`)
+        let errorMessage = ''
+        try {
+          const errorData = await response.json()
+          errorMessage = errorData.detail || response.statusText
+        } catch {
+          errorMessage = await response.text()
+        }
+
+        const apiError: APIError = {
+          message: `API Error: ${errorMessage}`,
+          timestamp: new Date().toISOString(),
+          endpoint,
+          details: {
+            status: response.status,
+            statusText: response.statusText
+          }
+        }
+        this.addError(apiError)
+        throw apiError
       }
 
-      const data = await response.json()
-      console.log('API Response:', data)
-      return data
+      return response.json()
     } catch (error) {
-      console.error('API Request failed:', error)
-      throw error
+      const apiError: APIError = {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+        endpoint
+      }
+      this.addError(apiError)
+      throw apiError
     }
   }
 

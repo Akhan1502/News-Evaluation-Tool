@@ -1,63 +1,67 @@
-declare global {
-  interface Window {
-    browser: any;
-    chrome: any;
-  }
-}
-
 interface BrowserAPI {
   tabs: {
-    query: (params: { active: boolean; currentWindow: true }) => Promise<any[]>;
-    executeScript: (tabId: number, details: any) => Promise<any>;
+    query: (queryInfo: { active: boolean; currentWindow: boolean }) => Promise<Array<{ id?: number; url?: string }>>;
+    executeScript: (tabId: number, details: { code: string }) => Promise<Array<{ result: any }>>;
   };
 }
 
-export default function getBrowserAPI(): BrowserAPI {
-  // For Firefox
-  if (typeof window !== 'undefined' && window.browser) {
-    console.log('Using Firefox WebExtensions API');
-    return {
-      tabs: {
-        query: window.browser.tabs.query,
-        executeScript: async (tabId: number, details: any) => {
-          return window.browser.tabs.executeScript(tabId, details);
-        }
-      }
-    };
-  }
+export async function getCurrentTab() {
+  const queryOptions = { active: true, currentWindow: true };
+  const api = window.chrome?.tabs || window.browser?.tabs;
+  if (!api) throw new Error('Browser API not available');
   
-  // For Chrome
-  if (typeof window !== 'undefined' && window.chrome) {
-    console.log('Using Chrome Extensions API');
+  const [tab] = await api.query(queryOptions);
+  return { id: tab.id || 0, url: tab.url };
+}
+
+export function getBrowserAPI(): BrowserAPI {
+  // Firefox
+  if (typeof window !== 'undefined' && window.browser) {
     return {
       tabs: {
-        query: window.chrome.tabs.query,
-        executeScript: async (tabId: number, details: any) => {
-          return window.chrome.scripting.executeScript({
+        async query(queryInfo) {
+          return await window.browser!.tabs.query(queryInfo);
+        },
+        async executeScript(tabId, details) {
+          const result = await window.browser!.scripting.executeScript({
             target: { tabId },
-            ...details
+            func: new Function(details.code) as () => void
           });
+          return [{ result: result[0]?.result }];
         }
       }
     };
   }
 
-  // For development/testing
+  // Chrome
+  if (typeof window !== 'undefined' && window.chrome) {
+    return {
+      tabs: {
+        async query(queryInfo) {
+          return await window.chrome!.tabs.query(queryInfo);
+        },
+        async executeScript(tabId, details) {
+          const result = await window.chrome!.scripting.executeScript({
+            target: { tabId },
+            func: new Function(details.code) as () => void
+          });
+          return [{ result: result[0]?.result }];
+        }
+      }
+    };
+  }
+
+  // Mock for development
   console.warn('No browser extension API found, using mock API');
   return {
     tabs: {
-      query: async () => [{
-        id: 1,
-        url: 'http://localhost:5173',
-        title: 'Test Page'
-      }],
-      executeScript: async () => [{
-        result: {
-          title: 'Test Article',
-          content: 'This is a test article content for development purposes.',
-          url: 'http://localhost:5173/test-article'
-        }
-      }]
+      async query() {
+        return [{ id: 1, url: 'http://localhost:5173' }];
+      },
+      async executeScript() {
+        console.log('Mock: Script execution');
+        return [{ result: { title: 'Mock Title', content: 'Mock Content', url: 'http://localhost:5173' } }];
+      }
     }
-  } as BrowserAPI;
+  };
 }

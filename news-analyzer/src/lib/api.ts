@@ -1,7 +1,5 @@
 import { API_CONFIG } from './constants';
 
-const API_BASE = 'http://localhost:8000';
-
 export interface TextAnalysis {
   id: string;
   title: string;
@@ -127,4 +125,4 @@ export const api = {
       throw error;
     }
   }
-}; 
+};

@@ -1,18 +1,21 @@
-// TODO: When deploying to production, replace these URLs with:
-// API: https://api.newsanalyzer.com/v1
-// Dashboard: https://dashboard.newsanalyzer.com/analysis
+// Environment-specific configuration
+const isDevelopment = import.meta.env.DEV;
 
 export const CONFIG = {
-  // Always use localhost during development
-  API_BASE_URL: 'http://localhost:8000',
-  ANALYSIS_DASHBOARD_URL: 'http://localhost:5173/analysis',
+  API_BASE_URL: isDevelopment
+    ? 'http://localhost:8000'
+    : 'http://localhost:8000', // Keep localhost for now, change in production
+  ANALYSIS_DASHBOARD_URL: isDevelopment
+    ? 'http://localhost:5173/analysis'
+    : 'http://localhost:5173/analysis', // Keep localhost for now, change in production
   ENDPOINTS: {
     ANALYZE: '/analyze',
     SENTIMENT_HISTORY: '/sentiment/history',
     CRITERIA_CHECK: '/criteria',
   }
-} as const
+} as const;
 
-// Log the current configuration
-console.log('API URL:', CONFIG.API_BASE_URL)
-console.log('Dashboard URL:', CONFIG.ANALYSIS_DASHBOARD_URL) 
+// Log the current configuration and environment
+console.log('Environment:', isDevelopment ? 'Development' : 'Production');
+console.log('API URL:', CONFIG.API_BASE_URL);
+console.log('Dashboard URL:', CONFIG.ANALYSIS_DASHBOARD_URL);

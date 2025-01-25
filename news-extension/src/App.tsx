@@ -6,7 +6,7 @@ import { SentimentChart } from './components/ui/sentiment-chart'
 import { CriteriaCheck } from './components/ui/criteria-check'
 import { BarChart2, ExternalLink, CheckCircle } from 'lucide-react'
 import { api } from './lib/api'
-import getBrowserAPI from './lib/browser'
+import { getBrowserAPI } from './lib/browser'
 import type { AnalysisState } from './types'
 
 const initialAnalysisState: AnalysisState = {

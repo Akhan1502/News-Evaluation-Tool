@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import logging
 from datetime import datetime
-import random  # For mock data generation
+import uuid
 
 # Configure logging
 logging.basicConfig(
@@ -15,13 +15,15 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
-# Update CORS middleware with specific origins
+# Allow all origins, methods and headers for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "chrome-extension://*", "moz-extension://*"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=3600
 )
 
 class ArticleData(BaseModel):
@@ -37,43 +39,46 @@ sentiment_history_db: Dict[str, List[Dict[str, Any]]] = {}
 
 @app.post("/analyze")
 async def analyze_content(article: ArticleData):
-    # Store sentiment history for the URL
-    if article.url:
-        if article.url not in sentiment_history_db:
-            sentiment_history_db[article.url] = []
-        
-        # Add new sentiment entry
-        sentiment_history_db[article.url].append({
-            "timestamp": datetime.now().isoformat(),
-            "value": random.uniform(0.3, 0.9)  # Mock sentiment value between 0.3 and 0.9
-        })
     try:
         logger.info(f"Received analysis request")
         logger.info(f"Title: {article.title}")
         logger.info(f"Content length: {len(article.content)}")
         logger.info(f"URL: {article.url}")
 
-        # Generate analysis response
-        analysis_response = {
-            "trustScore": 85,
-            "confidence": 92,
+        # Generate placeholder analysis result
+        analysis_result = {
+            "rating": 85,  # Placeholder trust score
+            "confidence": 0.92,  # Placeholder confidence score
             "sentiment": {
-                "score": 0.75,
-                "label": "positive"
+                "score": 0.75,  # Placeholder sentiment score (range: -1 to 1)
+                "label": "positive"  # Placeholder sentiment label
             },
+            "id": str(uuid.uuid4())  # Generate unique ID for analysis
+        }
+
+        # Store sentiment history for the URL
+        if article.url:
+            if article.url not in sentiment_history_db:
+                sentiment_history_db[article.url] = []
+            
+            sentiment_history_db[article.url].append({
+                "timestamp": datetime.now().isoformat(),
+                "value": analysis_result["sentiment"]["score"]
+            })
+
+        # Format response
+        analysis_response = {
+            "trustScore": analysis_result["rating"],
+            "confidence": analysis_result["confidence"],
+            "sentiment": analysis_result["sentiment"],
             "criteria": [
                 {
-                    "name": "Accuracy and Fairness",
-                    "met": True,
-                    "score": 88
-                },
-                {
-                    "name": "Independence",
-                    "met": True,
-                    "score": 85
+                    "name": "Content Trust Level",
+                    "met": analysis_result["rating"] >= 70,
+                    "score": analysis_result["rating"]
                 }
             ],
-            "analysisId": f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+            "analysisId": analysis_result["id"],
             "articleUrl": article.url or "unknown"
         }
         

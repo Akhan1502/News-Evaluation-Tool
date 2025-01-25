@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import App from '../App'
-import getBrowserAPI from '../lib/browser'
+import { getBrowserAPI } from '../lib/browser'
 
 export function ExtensionApp() {
   useEffect(() => {
@@ -19,4 +19,4 @@ export function ExtensionApp() {
   // For now, we'll just render the App component
   // Later we can add extension-specific functionality here
   return <App />
-} 
+}
