@@ -14,10 +14,15 @@ def test_create_news_article():
         "trust_score": 85,
         "paragraphs": [
             {
-                "content": "AI-powered diagnostic tools are showing remarkable accuracy in detecting diseases early, potentially saving millions of lives.",
+                "content": "AI-powered diagnostic tools are showing remarkable accuracy in detecting diseases early, potentially saving millions of lives.AI-powered diagnostic tools are showing remarkable accuracy in detecting diseases early, potentially saving millions of lives.AI-powered diagnostic tools are showing remarkable accuracy in detecting diseases early, potentially saving millions of lives.AI-powered diagnostic tools are showing remarkable accuracy in detecting diseases early, potentially saving millions of lives.AI-powered diagnostic tools are showing remarkable accuracy in detecting diseases early, potentially saving millions of lives.",
                 "source": "Medical AI Journal",
                 "order": 1,
                 "alternative_views": [
+                    {
+                        "content": "While AI shows promise in diagnostics, concerns about data privacy and algorithmic bias need to be addressed.",
+                        "source": "Healthcare Ethics Quarterly"
+                    },
+
                     {
                         "content": "While AI shows promise in diagnostics, concerns about data privacy and algorithmic bias need to be addressed.",
                         "source": "Healthcare Ethics Quarterly"

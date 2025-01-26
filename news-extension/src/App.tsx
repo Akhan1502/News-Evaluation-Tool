@@ -142,9 +142,8 @@ export default function App() {
     }
   };
 
-  const openAnalysisDashboard = (analysisId: string | null) => {
-    if (!analysisId) return;
-    const dashboardUrl = `${import.meta.env.VITE_DASHBOARD_URL}/analysis/${analysisId}`;
+  const openAnalysisDashboard = () => {
+    const dashboardUrl = 'http://localhost:5174';
     window.open(dashboardUrl, '_blank');
   };
 
@@ -219,7 +218,7 @@ export default function App() {
         {/* View Full Analysis Button */}
         <Button 
           className="w-full bg-green-600 hover:bg-green-700 transition-colors sticky bottom-0"
-          onClick={() => openAnalysisDashboard(analysis.analysisId)}
+          onClick={() => openAnalysisDashboard()}
           disabled={!analysis.analysisId}
         >
           View Full Analysis

@@ -52,7 +52,7 @@ async def analyze_content(article: ArticleData):
         # Generate placeholder analysis result
         analysis_result = {
             "rating": 85,  # Placeholder trust score
-            "confidence": 0.92,  # Placeholder confidence score
+            "confidence": 92,  # Placeholder confidence score
             "sentiment": {
                 "score": 0.75,  # Placeholder sentiment score (range: -1 to 1)
                 "label": "positive"  # Placeholder sentiment label
@@ -80,7 +80,29 @@ async def analyze_content(article: ArticleData):
                     "name": "Content Trust Level",
                     "met": analysis_result["rating"] >= 70,
                     "score": analysis_result["rating"]
+                },
+                {
+                    "name": "Accuracy and Fairness",
+                    "met": analysis_result["rating"] >= 75,
+                    "score": analysis_result["rating"] * 0.95
+                },
+                {
+                    "name": "Independence",
+                    "met": analysis_result["confidence"] >= 68,
+                    "score": analysis_result["confidence"] * 100
+                },
+                {
+                    "name": "Impartiality",
+                    "met": abs(analysis_result["sentiment"]["score"]) <= 0.3,
+                    "score": (1 - abs(analysis_result["sentiment"]["score"])) * 100
+                },
+                {
+                    "name": "Accountability",
+                    "met": analysis_result["rating"] >= 80 and analysis_result["confidence"] >= 0.85,
+                    "score": (analysis_result["rating"] + analysis_result["confidence"] * 100) / 2
                 }
+
+
             ],
             "analysisId": analysis_result["id"],
             "articleUrl": article.url or "unknown"
