@@ -65,15 +65,43 @@ export const api = {
     if (!response.ok) {
       throw new Error('Failed to fetch analyses');
     }
-    return response.json();
+    const data = await response.json();
+    
+    // Transform the API response to ensure proper structure
+    return data.map((item: any) => ({
+      ...item,
+      paragraphs: item.paragraphs?.map((p: any) => ({
+        id: p.id?.toString() || Math.random().toString(36).substr(2, 9),
+        content: p.content,
+        source: p.source,
+        alternativeViews: p.alternative_views?.map((av: any) => ({
+          content: av.content,
+          source: av.source
+        })) || []
+      })) || []
+    }));
   },
 
   async analyzeContent(data: ArticleData): Promise<AnalysisResponse> {
     console.log('Analyzing content:', data);
 
-    if (!data.url || !data.title || !data.content || !data.source) {
-      throw new Error('Missing required fields: title, content, url, and source are required');
+    // Ensure all required fields are present
+    if (!data.title || !data.content || !data.url) {
+      throw new Error('Missing required fields: title, content, and url are required');
     }
+
+    // Add source if not provided
+    const enrichedData = {
+      ...data,
+      source: data.source || 'User Submission',
+      paragraphs: data.paragraphs || [
+        {
+          content: data.content,
+          source: data.source || 'User Submission',
+          alternativeViews: []
+        }
+      ]
+    };
 
     try {
       const response = await fetch(`${API_CONFIG.BASE_URL}/api/news/analyze`, {
@@ -81,7 +109,7 @@ export const api = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(enrichedData),
       });
 
       if (!response.ok) {

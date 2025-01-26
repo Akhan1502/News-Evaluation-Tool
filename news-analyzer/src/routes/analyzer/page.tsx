@@ -45,6 +45,10 @@ export function AnalyzerPage() {
     setIsLoading(true);
     try {
       const data = await api.getAnalyses();
+      console.log('Fetched analyses data:', data);
+      data.forEach((analysis, index) => {
+        console.log(`Analysis ${index + 1} paragraphs:`, analysis.paragraphs);
+      });
       setAnalyses(data);
       setLastFetchTime(now);
     } catch (error) {
@@ -60,6 +64,11 @@ export function AnalyzerPage() {
   }, [fetchAnalyses]);
 
   const handleAnalysisSelect = useCallback((analysis: TextAnalysis) => {
+    console.log('Selected analysis data:', analysis);
+    console.log('Paragraphs data:', analysis.paragraphs);
+    analysis.paragraphs?.forEach((paragraph, index) => {
+      console.log(`Paragraph ${index + 1} alternative views:`, paragraph.alternativeViews);
+    });
     setSelectedAnalysis(analysis);
   }, []);
 
@@ -264,40 +273,45 @@ export function AnalyzerPage() {
                 <div className="prose prose-invert max-w-none">
                   <h3 className="text-sm font-medium text-white/70 mb-4">Article Analysis</h3>
                   <div className="space-y-6">
-                    {selectedAnalysis.paragraphs?.map((paragraph, index) => (
-                      <div key={paragraph.id} className="relative bg-[#1c1c1c] rounded-lg p-4 border border-white/5">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-medium text-white/50">Paragraph {index + 1}</span>
-                          <span className="text-xs text-white/40">{paragraph.source}</span>
-                        </div>
-                        <div className="text-sm text-white/90 leading-relaxed mb-4">
-                          <div className="prose prose-invert max-w-none">
-                            {paragraph.content}
+                    {selectedAnalysis?.paragraphs?.map((paragraph, index) => (
+                      <div key={paragraph.id || index} className="relative bg-[#1c1c1c] rounded-lg p-4 border border-white/5">
+                        {/* Main paragraph content */}
+                        <div className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-medium text-white/50">Paragraph {index + 1}</span>
+                            <span className="text-xs text-white/40">{paragraph.source}</span>
+                          </div>
+                          <div className="text-sm text-white/90 leading-relaxed">
+                            <div className="prose prose-invert max-w-none">
+                              {paragraph.content}
+                            </div>
                           </div>
                         </div>
-                        <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
-                          <h4 className="text-xs font-medium text-white/50">Alternative Perspectives</h4>
-                          {paragraph.alternativeViews && paragraph.alternativeViews.length > 0 ? (
-                            paragraph.alternativeViews.map((view, viewIndex) => (
-                              <div
-                                key={`${paragraph.id}-${viewIndex}`}
-                                className={`p-3 rounded-md ${viewIndex === 0 ? 'bg-blue-900/10 border border-blue-500/20' : 'bg-purple-900/10 border border-purple-500/20'}`}
-                              >
-                                <div className="text-sm text-white/80 leading-relaxed">
-                                  {view.content}
+
+                        {/* Alternative views section */}
+                        {paragraph.alternativeViews && paragraph.alternativeViews.length > 0 && (
+                          <div className="mt-4 border-t border-white/10 pt-4">
+                            <h4 className="text-xs font-medium text-green-400/80 mb-3">Alternative Perspectives ({paragraph.alternativeViews.length})</h4>
+                            <div className="space-y-3">
+                              {paragraph.alternativeViews.map((view, viewIndex) => (
+                                <div
+                                  key={`${paragraph.id || index}-${viewIndex}`}
+                                  className="p-3 rounded-md bg-green-950/30 border border-green-600/20 hover:bg-green-950/40 transition-colors"
+                                >
+                                  <div className="text-sm text-white/90 leading-relaxed">
+                                    {view.content}
+                                  </div>
+                                  {view.source && (
+                                    <div className="text-xs text-green-400/70 mt-2 flex items-center gap-2">
+                                      <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-500/50"></span>
+                                      {view.source}
+                                    </div>
+                                  )}
                                 </div>
-                                <div className="text-xs text-white/40 mt-2 flex items-center gap-2">
-                                  <span className="inline-block w-2 h-2 rounded-full bg-white/20"></span>
-                                  {view.source}
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="text-sm text-white/50 italic">
-                              No alternative perspectives available
+                              ))}
                             </div>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
